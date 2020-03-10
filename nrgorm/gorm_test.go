@@ -2,12 +2,14 @@ package nrgorm
 
 import (
 	"os"
+	"strings"
 	"testing"
 
+	"github.com/newrelic/go-agent/v3/newrelic"
+
+	"github.com/filipemendespi/newrelic-context/nrmock"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	newrelic "github.com/newrelic/go-agent"
-	"github.com/smacker/newrelic-context/nrmock"
 )
 
 type Model struct {
@@ -16,7 +18,7 @@ type Model struct {
 }
 
 var db *gorm.DB
-var testTxn newrelic.Transaction
+var testTxn *newrelic.Transaction
 var lastSegment *nrmock.DatastoreSegment
 
 func TestMain(m *testing.M) {
@@ -52,8 +54,11 @@ func TestMain(m *testing.M) {
 		return mock
 	}
 
-	app := &nrmock.NewrelicApp{}
-	testTxn = app.StartTransaction("txn-name", nil, nil)
+	app, _ := newrelic.NewApplication(
+		newrelic.ConfigAppName("test"),
+		newrelic.ConfigLicense(strings.Repeat("a", 40)),
+	)
+	testTxn = app.StartTransaction("txn-name")
 
 	os.Exit(m.Run())
 }

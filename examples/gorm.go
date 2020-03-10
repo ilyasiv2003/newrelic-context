@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
+	nrcontext "github.com/filipemendespi/newrelic-context"
+	"github.com/filipemendespi/newrelic-context/nrgorm"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	"github.com/smacker/newrelic-context"
-	"github.com/smacker/newrelic-context/nrgorm"
 )
 
 var db *gorm.DB

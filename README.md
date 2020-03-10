@@ -4,7 +4,7 @@ Contains different helpers to make life easier with NewRelic and Context.
 
 ## Installation
 
-`go get github.com/smacker/newrelic-context`
+`go get github.com/filipemendespi/newrelic-context`
 
 ## In this package:
 
@@ -17,7 +17,7 @@ Contains different helpers to make life easier with NewRelic and Context.
 * `RedisWrapper` - Logs gopkg.in/redis.v5 time in newrelic
 * `WrapRedisClient` - Returns copy of redis client with newrelic for transaction
 
-API documentation is available on [godoc.org](https://godoc.org/github.com/smacker/newrelic-context)
+API documentation is available on [godoc.org](https://godoc.org/github.com/filipemendespi/newrelic-context)
 
 ## Examples:
 
@@ -27,7 +27,7 @@ Use NewRelicMiddleware:
 package main
 
 import (
-    "github.com/smacker/newrelic-context"
+    "github.com/filipemendespi/newrelic-context"
     "log"
     "net/http"
 )

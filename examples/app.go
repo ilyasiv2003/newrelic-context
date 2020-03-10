@@ -1,21 +1,27 @@
 package main
 
 import (
-	"github.com/smacker/newrelic-context"
 	"log"
 	"net/http"
+
+	nrcontext "github.com/filipemendespi/newrelic-context"
 )
 
 func indexHandlerFunc(rw http.ResponseWriter, req *http.Request) {
 	rw.Write([]byte("I'm an index page!"))
 
 	client := &http.Client{Timeout: 10}
-	nrcontext.WrapHTTPClient(req.Context(), client)
-	_, err := client.Get("http://google.com")
-	if err != nil {
-		rw.Write([]byte("Can't fetch google :("))
-		return
-	}
+	nrcontext.WrapHTTPClient(req.Context(), client, func() (*http.Request, error) {
+		req, err := http.NewRequest("GET", "http://google.com", nil)
+
+		if err != nil {
+			rw.Write([]byte("Can't fetch google :("))
+			return nil, err
+		}
+
+		return req, nil
+	})
+
 	rw.Write([]byte("Google fetched successfully!"))
 }
 

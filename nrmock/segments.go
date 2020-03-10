@@ -1,15 +1,14 @@
 package nrmock
 
-import newrelic "github.com/newrelic/go-agent"
+import "github.com/newrelic/go-agent/v3/newrelic"
 
 type DatastoreSegment struct {
 	*newrelic.DatastoreSegment
-	Txn       newrelic.Transaction
+	Txn       *newrelic.Transaction
 	StartTime newrelic.SegmentStartTime
 	Finished  bool
 }
 
-func (m *DatastoreSegment) End() error {
+func (m *DatastoreSegment) End() {
 	m.Finished = true
-	return nil
 }

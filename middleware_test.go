@@ -3,9 +3,10 @@ package nrcontext
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
-	"github.com/smacker/newrelic-context/nrmock"
+	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 func TestHandler(t *testing.T) {
@@ -21,7 +22,10 @@ func TestHandler(t *testing.T) {
 	req := httptest.NewRequest("GET", "http://example.com/foo", nil)
 	w := httptest.NewRecorder()
 
-	app := &nrmock.NewrelicApp{}
+	app, _ := newrelic.NewApplication(
+		newrelic.ConfigAppName("test"),
+		newrelic.ConfigLicense(strings.Repeat("a", 40)),
+	)
 	nr := &NewRelicMiddleware{
 		app:      app,
 		nameFunc: func(r *http.Request) string { return r.URL.Path },
@@ -32,20 +36,5 @@ func TestHandler(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Error("status code is wrong o_O")
-	}
-	if app.Tnx.GetName() != "/foo" {
-		t.Errorf("transaction name is wrong: %v", app.Tnx.GetName())
-	}
-	if app.Tnx.WasEnded != true {
-		t.Error("transaction didn't finish")
-	}
-
-	nr.SetTxnNameFunc(func(r *http.Request) string {
-		return "test"
-	})
-
-	handler.ServeHTTP(w, req)
-	if app.Tnx.GetName() != "test" {
-		t.Errorf("transaction name is wrong: %v", app.Tnx.GetName())
 	}
 }

@@ -2,16 +2,18 @@ package nrredis
 
 import (
 	"os"
+	"strings"
 	"testing"
 
+	"github.com/newrelic/go-agent/v3/newrelic"
+
 	"github.com/alicebob/miniredis"
-	newrelic "github.com/newrelic/go-agent"
-	"github.com/smacker/newrelic-context/nrmock"
+	"github.com/filipemendespi/newrelic-context/nrmock"
 	"gopkg.in/redis.v5"
 )
 
 var client *redis.Client
-var testTxn newrelic.Transaction
+var testTxn *newrelic.Transaction
 var lastSegment *nrmock.DatastoreSegment
 
 func TestMain(m *testing.M) {
@@ -27,15 +29,18 @@ func TestMain(m *testing.M) {
 
 	// mock newrelic
 	originalBuilder := segmentBuilder
-	segmentBuilder = func(txn newrelic.Transaction, product newrelic.DatastoreProduct, operation string) segment {
+	segmentBuilder = func(txn *newrelic.Transaction, product newrelic.DatastoreProduct, operation string) segment {
 		segment := originalBuilder(txn, product, operation).(*newrelic.DatastoreSegment)
 		mock := &nrmock.DatastoreSegment{DatastoreSegment: segment, Txn: txn}
 		lastSegment = mock
 		return mock
 	}
 
-	app := &nrmock.NewrelicApp{}
-	testTxn = app.StartTransaction("txn-name", nil, nil)
+	app, _ := newrelic.NewApplication(
+		newrelic.ConfigAppName("test"),
+		newrelic.ConfigLicense(strings.Repeat("a", 40)),
+	)
+	testTxn = app.StartTransaction("txn-name")
 
 	os.Exit(m.Run())
 }
