@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	txnGormKey   = "newrelicTransaction"
+	txnGormKey   = "newRelicTransaction"
 	startTimeKey = "newrelicStartTime"
 )
 
