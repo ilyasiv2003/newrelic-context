@@ -3,7 +3,7 @@ package nrcontext
 import (
 	"context"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	"github.com/newrelic/go-agent"
 	"github.com/smacker/newrelic-context/nrgorm"
 	"github.com/smacker/newrelic-context/nrredis"
