@@ -2,7 +2,7 @@ package nrgorm
 
 import (
 	newrelic "github.com/newrelic/go-agent"
-	"github.com/smacker/newrelic-context/nrmock"
+	"github.com/ekramul1z/newrelic-context/nrmock"
 	"gorm.io/driver/sqlite"
 	_ "gorm.io/driver/sqlite"
 	"gorm.io/gorm"
