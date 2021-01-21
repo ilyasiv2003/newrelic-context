@@ -1,10 +1,9 @@
 package nrgorm
 
 import (
-	newrelic "github.com/newrelic/go-agent"
 	"github.com/ekramul1z/newrelic-context/nrmock"
+	newrelic "github.com/newrelic/go-agent"
 	"gorm.io/driver/sqlite"
-	_ "gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"log"
@@ -26,18 +25,23 @@ func TestMain(m *testing.M) {
 	var err error
 	// prepare db
 	os.Remove("./foo.db")
-		newLogger := logger.New(
+	newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
 		logger.Config{
-			SlowThreshold: time.Microsecond,   // Slow SQL threshold
-			LogLevel:      logger.Info, // Log level
-			Colorful:      false,         // Disable color
+			SlowThreshold: time.Microsecond, // Slow SQL threshold
+			LogLevel:      logger.Info,      // Log level
+			Colorful:      false,            // Disable color
 		},
 	)
-	db, err = gorm.Open(sqlite.Open("./foo.db"),  &gorm.Config{Logger: newLogger})
+	db, err = gorm.Open(sqlite.Open("./foo.db"), &gorm.Config{Logger: newLogger})
 	if err != nil {
 		panic(err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic(err)
+	}
+	defer sqlDB.Close()
 	if err := db.Migrator().CreateTable(&Model{}); err != nil {
 		panic(err)
 	}

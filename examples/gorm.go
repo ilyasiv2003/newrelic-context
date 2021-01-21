@@ -5,16 +5,16 @@ import (
 	"gorm.io/driver/sqlite"
 	"net/http"
 
-	"gorm.io/gorm"
-	_ "gorm.io/driver/sqlite"
 	"github.com/ekramul1z/newrelic-context"
 	"github.com/ekramul1z/newrelic-context/nrgorm"
+	_ "gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 var db *gorm.DB
 
 func initDB() *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("./foo.db"),  &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("./foo.db"), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -40,6 +40,11 @@ func catalogPage(db *gorm.DB) http.Handler {
 
 func other_main() {
 	db = initDB()
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic(err)
+	}
+	defer sqlDB.Close()
 
 	handler := catalogPage(db)
 	nrmiddleware, _ := nrcontext.NewMiddleware("test-app", "my-license-key")
