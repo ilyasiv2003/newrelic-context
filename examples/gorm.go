@@ -2,18 +2,19 @@ package main
 
 import (
 	"fmt"
+	"gorm.io/driver/sqlite"
 	"net/http"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	"github.com/smacker/newrelic-context"
-	"github.com/smacker/newrelic-context/nrgorm"
+	"github.com/ekramul1z/newrelic-context"
+	"github.com/ekramul1z/newrelic-context/nrgorm"
+	_ "gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 var db *gorm.DB
 
 func initDB() *gorm.DB {
-	db, err := gorm.Open("sqlite3", "./foo.db")
+	db, err := gorm.Open(sqlite.Open("./foo.db"), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +40,11 @@ func catalogPage(db *gorm.DB) http.Handler {
 
 func other_main() {
 	db = initDB()
-	defer db.Close()
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic(err)
+	}
+	defer sqlDB.Close()
 
 	handler := catalogPage(db)
 	nrmiddleware, _ := nrcontext.NewMiddleware("test-app", "my-license-key")

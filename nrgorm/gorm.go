@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	newrelic "github.com/newrelic/go-agent"
 )
 
@@ -23,14 +23,14 @@ func SetTxnToGorm(txn newrelic.Transaction, db *gorm.DB) *gorm.DB {
 
 // AddGormCallbacks adds callbacks to NewRelic, you should call SetTxnToGorm to make them work
 func AddGormCallbacks(db *gorm.DB) {
-	dialect := db.Dialect().GetName()
+	dialect := db.Config.Dialector.Name()
 	var product newrelic.DatastoreProduct
 	switch dialect {
 	case "postgres":
 		product = newrelic.DatastorePostgres
 	case "mysql":
 		product = newrelic.DatastoreMySQL
-	case "sqlite3":
+	case "sqlite":
 		product = newrelic.DatastoreSQLite
 	case "mssql":
 		product = newrelic.DatastoreMSSQL
@@ -43,7 +43,7 @@ func AddGormCallbacks(db *gorm.DB) {
 	registerCallbacks(db, "query", callbacks)
 	registerCallbacks(db, "update", callbacks)
 	registerCallbacks(db, "delete", callbacks)
-	registerCallbacks(db, "row_query", callbacks)
+	registerCallbacks(db, "row", callbacks)
 }
 
 type callbacks struct {
@@ -54,53 +54,53 @@ func newCallbacks(product newrelic.DatastoreProduct) *callbacks {
 	return &callbacks{product}
 }
 
-func (c *callbacks) beforeCreate(scope *gorm.Scope)   { c.before(scope) }
-func (c *callbacks) afterCreate(scope *gorm.Scope)    { c.after(scope, "INSERT") }
-func (c *callbacks) beforeQuery(scope *gorm.Scope)    { c.before(scope) }
-func (c *callbacks) afterQuery(scope *gorm.Scope)     { c.after(scope, "SELECT") }
-func (c *callbacks) beforeUpdate(scope *gorm.Scope)   { c.before(scope) }
-func (c *callbacks) afterUpdate(scope *gorm.Scope)    { c.after(scope, "UPDATE") }
-func (c *callbacks) beforeDelete(scope *gorm.Scope)   { c.before(scope) }
-func (c *callbacks) afterDelete(scope *gorm.Scope)    { c.after(scope, "DELETE") }
-func (c *callbacks) beforeRowQuery(scope *gorm.Scope) { c.before(scope) }
-func (c *callbacks) afterRowQuery(scope *gorm.Scope)  { c.after(scope, "") }
+func (c *callbacks) beforeCreate(db *gorm.DB)   { c.before(db) }
+func (c *callbacks) afterCreate(db *gorm.DB)    { c.after(db, "INSERT") }
+func (c *callbacks) beforeQuery(db *gorm.DB)    { c.before(db) }
+func (c *callbacks) afterQuery(db *gorm.DB)     { c.after(db, "SELECT") }
+func (c *callbacks) beforeUpdate(db *gorm.DB)   { c.before(db) }
+func (c *callbacks) afterUpdate(db *gorm.DB)    { c.after(db, "UPDATE") }
+func (c *callbacks) beforeDelete(db *gorm.DB)   { c.before(db) }
+func (c *callbacks) afterDelete(db *gorm.DB)    { c.after(db, "DELETE") }
+func (c *callbacks) beforeRowQuery(db *gorm.DB) { c.before(db) }
+func (c *callbacks) afterRowQuery(db *gorm.DB)  { c.after(db, "") }
 
-func (c *callbacks) before(scope *gorm.Scope) {
-	txn, ok := scope.Get(txnGormKey)
+func (c *callbacks) before(db *gorm.DB) {
+	txn, ok := db.Get(txnGormKey)
 	if !ok {
 		return
 	}
-	scope.Set(startTimeKey, newrelic.StartSegmentNow(txn.(newrelic.Transaction)))
+	db.Set(startTimeKey, newrelic.StartSegmentNow(txn.(newrelic.Transaction)))
 }
 
-func (c *callbacks) after(scope *gorm.Scope, operation string) {
-	startTime, ok := scope.Get(startTimeKey)
+func (c *callbacks) after(db *gorm.DB, operation string) {
+	startTime, ok := db.Get(startTimeKey)
 	if !ok {
 		return
 	}
 	if operation == "" {
-		operation = strings.ToUpper(strings.Split(scope.SQL, " ")[0])
+		operation = strings.ToUpper(strings.Split(db.Statement.SQL.String(), " ")[0])
 	}
 	segmentBuilder(
 		startTime.(newrelic.SegmentStartTime),
 		c.product,
-		scope.SQL,
+		db.Statement.SQL.String(),
 		operation,
-		scope.TableName(),
+		db.Statement.Table,
 	).End()
 
 	// gorm wraps insert&update into transaction automatically
 	// add another segment for commit/rollback in such case
-	if _, ok := scope.InstanceGet("gorm:started_transaction"); !ok {
-		scope.Set(startTimeKey, nil)
+	if _, ok := db.InstanceGet("gorm:started_transaction"); !ok {
+		db.Set(startTimeKey, nil)
 		return
 	}
-	txn, _ := scope.Get(txnGormKey)
-	scope.Set(startTimeKey, newrelic.StartSegmentNow(txn.(newrelic.Transaction)))
+	txn, _ := db.Get(txnGormKey)
+	db.Set(startTimeKey, newrelic.StartSegmentNow(txn.(newrelic.Transaction)))
 }
 
-func (c *callbacks) commitOrRollback(scope *gorm.Scope) {
-	startTime, ok := scope.Get(startTimeKey)
+func (c *callbacks) commitOrRollback(db *gorm.DB) {
+	startTime, ok := db.Get(startTimeKey)
 	if !ok || startTime == nil {
 		return
 	}
@@ -110,7 +110,7 @@ func (c *callbacks) commitOrRollback(scope *gorm.Scope) {
 		c.product,
 		"",
 		"COMMIT/ROLLBACK",
-		scope.TableName(),
+		db.Statement.Table,
 	).End()
 }
 
@@ -141,9 +141,9 @@ func registerCallbacks(db *gorm.DB, name string, c *callbacks) {
 		db.Callback().Delete().
 			After("gorm:commit_or_rollback_transaction").
 			Register(fmt.Sprintf("newrelic:commit_or_rollback_transaction_%v", name), c.commitOrRollback)
-	case "row_query":
-		db.Callback().RowQuery().Before(gormCallbackName).Register(beforeName, c.beforeRowQuery)
-		db.Callback().RowQuery().After(gormCallbackName).Register(afterName, c.afterRowQuery)
+	case "row":
+		db.Callback().Row().Before(gormCallbackName).Register(beforeName, c.beforeRowQuery)
+		db.Callback().Row().After(gormCallbackName).Register(afterName, c.afterRowQuery)
 	}
 }
 

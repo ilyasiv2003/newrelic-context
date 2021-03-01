@@ -1,13 +1,15 @@
 package nrgorm
 
 import (
+	"github.com/ekramul1z/newrelic-context/nrmock"
+	newrelic "github.com/newrelic/go-agent"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	"log"
 	"os"
 	"testing"
-
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	newrelic "github.com/newrelic/go-agent"
-	"github.com/smacker/newrelic-context/nrmock"
+	"time"
 )
 
 type Model struct {
@@ -23,13 +25,24 @@ func TestMain(m *testing.M) {
 	var err error
 	// prepare db
 	os.Remove("./foo.db")
-	db, err = gorm.Open("sqlite3", "./foo.db")
+	newLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
+		logger.Config{
+			SlowThreshold: time.Microsecond, // Slow SQL threshold
+			LogLevel:      logger.Info,      // Log level
+			Colorful:      false,            // Disable color
+		},
+	)
+	db, err = gorm.Open(sqlite.Open("./foo.db"), &gorm.Config{Logger: newLogger})
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
-
-	if err := db.CreateTable(&Model{}).Error; err != nil {
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic(err)
+	}
+	defer sqlDB.Close()
+	if err := db.Migrator().CreateTable(&Model{}); err != nil {
 		panic(err)
 	}
 	if err := db.Create(&Model{Value: "to-select"}).Error; err != nil {
@@ -60,13 +73,14 @@ func TestMain(m *testing.M) {
 
 func TestWrappedGorm(t *testing.T) {
 	segmentsHistory = []*nrmock.DatastoreSegment{}
-	txnDB := SetTxnToGorm(testTxn, db)
+	txn := SetTxnToGorm(testTxn, db)
+	txnDB := txn.WithContext(nil)
 	dbInsert(t, txnDB)
 	lastSegment := segmentsHistory[0]
 	if lastSegment.Product != newrelic.DatastoreSQLite {
 		t.Errorf("wrong product: %v", lastSegment.Product)
 	}
-	if lastSegment.ParameterizedQuery != `INSERT INTO "models" ("value") VALUES (?)` {
+	if lastSegment.ParameterizedQuery != "INSERT INTO `models` (`value`) VALUES (?)" {
 		t.Errorf("wrong query: %v", lastSegment.ParameterizedQuery)
 	}
 	if lastSegment.Operation != "INSERT" {
@@ -85,6 +99,7 @@ func TestWrappedGorm(t *testing.T) {
 	}
 	// no transaction on select
 	dbSelect(t, txnDB)
+
 	// to update we have to create a row first +2 transactions
 	dbUpdate(t, txnDB)
 	lastSegment = segmentsHistory[5]
@@ -101,6 +116,7 @@ func TestWrappedGorm(t *testing.T) {
 	}
 	// to delete we have to create a row first +2 transactions
 	dbDelete(t, txnDB)
+
 	lastSegment = segmentsHistory[9]
 	if lastSegment.Operation != "DELETE" {
 		t.Errorf("wrong operation: %v", lastSegment.Operation)
@@ -119,7 +135,7 @@ func TestWrappedGorm(t *testing.T) {
 	if lastSegment.Operation != "SELECT" {
 		t.Error("must report SELECT operation even no record result")
 	}
-	if lastSegment.ParameterizedQuery != `SELECT * FROM "models"  WHERE ("models"."value" = ?) ORDER BY "models"."id" ASC LIMIT 1` {
+	if lastSegment.ParameterizedQuery != "SELECT * FROM `models` WHERE `models`.`value` = ? ORDER BY `models`.`id` LIMIT 1" {
 		t.Error("wrong query", lastSegment.ParameterizedQuery)
 	}
 
@@ -202,7 +218,7 @@ func dbUpdate(t *testing.T, db *gorm.DB) {
 }
 
 func dbDelete(t *testing.T, db *gorm.DB) {
-	m := &Model{Value: "to-update"}
+	m := &Model{Value: "to-delete"}
 	if err := db.Create(m).Error; err != nil {
 		t.Error(err)
 	}

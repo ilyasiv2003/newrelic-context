@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/alicebob/miniredis"
+	"github.com/ekramul1z/newrelic-context/nrmock"
 	newrelic "github.com/newrelic/go-agent"
-	"github.com/smacker/newrelic-context/nrmock"
 	"gopkg.in/redis.v5"
 )
 
