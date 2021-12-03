@@ -18,7 +18,9 @@ func SetTxnToGorm(txn newrelic.Transaction, db *gorm.DB) *gorm.DB {
 	if txn == nil {
 		return db
 	}
-	return db.Set(txnGormKey, txn)
+	// Set returns not clonnable db, and if we do two queries on it, second one gets all the clauses of first.
+	// Creating session seems to solve this problem
+	return db.Set(txnGormKey, txn).Session(&gorm.Session{SkipDefaultTransaction: true})
 }
 
 // AddGormCallbacks adds callbacks to NewRelic, you should call SetTxnToGorm to make them work
