@@ -1,15 +1,16 @@
 package nrgorm
 
 import (
-	"github.com/ekramul1z/newrelic-context/nrmock"
-	newrelic "github.com/newrelic/go-agent"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/ilyasiv2003/newrelic-context/nrmock"
+	newrelic "github.com/newrelic/go-agent"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type Model struct {

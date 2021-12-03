@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ekramul1z/newrelic-context/nrmock"
+	"github.com/ilyasiv2003/newrelic-context/nrmock"
 )
 
 func TestHandler(t *testing.T) {

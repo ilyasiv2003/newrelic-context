@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/ekramul1z/newrelic-context"
 	"log"
 	"net/http"
 )

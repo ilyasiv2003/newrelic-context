@@ -3,11 +3,11 @@ package nrcontext
 import (
 	"context"
 
+	"github.com/go-redis/redis/v8"
+	"github.com/ilyasiv2003/newrelic-context/nrgorm"
+	"github.com/ilyasiv2003/newrelic-context/nrredis"
+	newrelic "github.com/newrelic/go-agent"
 	"gorm.io/gorm"
-	"github.com/newrelic/go-agent"
-	"github.com/ekramul1z/newrelic-context/nrgorm"
-	"github.com/ekramul1z/newrelic-context/nrredis"
-	redis "gopkg.in/redis.v5"
 )
 
 type contextKey int

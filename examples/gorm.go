@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"gorm.io/driver/sqlite"
 	"net/http"
 
-	"github.com/ekramul1z/newrelic-context"
-	"github.com/ekramul1z/newrelic-context/nrgorm"
+	"gorm.io/driver/sqlite"
+
+	"github.com/ilyasiv2003/newrelic-context/nrgorm"
 	_ "gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )

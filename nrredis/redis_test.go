@@ -1,13 +1,14 @@
 package nrredis
 
 import (
+	"context"
 	"os"
 	"testing"
 
-	"github.com/alicebob/miniredis"
-	"github.com/ekramul1z/newrelic-context/nrmock"
+	"github.com/alicebob/miniredis/v2"
+	"github.com/go-redis/redis/v8"
+	"github.com/ilyasiv2003/newrelic-context/nrmock"
 	newrelic "github.com/newrelic/go-agent"
-	"gopkg.in/redis.v5"
 )
 
 var client *redis.Client
@@ -82,14 +83,14 @@ func TestSegmentParams(t *testing.T) {
 }
 
 func callSet(t *testing.T, c *redis.Client, value string) {
-	_, err := c.Set("foo", value, 0).Result()
+	_, err := c.Set(context.Background(), "foo", value, 0).Result()
 	if err != nil {
 		t.Fatalf("Redis returned error: %v", err)
 	}
 }
 
 func callGet(t *testing.T, c *redis.Client) {
-	_, err := c.Get("foo").Result()
+	_, err := c.Get(context.Background(), "foo").Result()
 	if err != nil {
 		t.Fatalf("Redis returned error: %v", err)
 	}

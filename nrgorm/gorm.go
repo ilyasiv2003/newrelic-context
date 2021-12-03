@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"gorm.io/gorm"
 	newrelic "github.com/newrelic/go-agent"
+	"gorm.io/gorm"
 )
 
 const (

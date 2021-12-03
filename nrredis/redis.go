@@ -1,11 +1,14 @@
 package nrredis
 
 import (
+	"context"
 	"strings"
 
+	"github.com/go-redis/redis/v8"
 	newrelic "github.com/newrelic/go-agent"
-	redis "gopkg.in/redis.v5"
 )
+
+const startTimeKey = iota
 
 // WrapRedisClient adds newrelic measurements for commands and returns cloned client
 func WrapRedisClient(txn newrelic.Transaction, c *redis.Client) *redis.Client {
@@ -16,14 +19,8 @@ func WrapRedisClient(txn newrelic.Transaction, c *redis.Client) *redis.Client {
 	// clone using context
 	ctx := c.Context()
 	copy := c.WithContext(ctx)
+	copy.AddHook(hook{txn: txn})
 
-	copy.WrapProcess(func(oldProcess func(cmd redis.Cmder) error) func(cmd redis.Cmder) error {
-		return func(cmd redis.Cmder) error {
-			defer segmentBuilder(txn, newrelic.DatastoreRedis, strings.Split(cmd.String(), " ")[0]).End()
-
-			return oldProcess(cmd)
-		}
-	})
 	return copy
 }
 
@@ -38,4 +35,24 @@ var segmentBuilder = func(txn newrelic.Transaction, product newrelic.DatastorePr
 		Product:   product,
 		Operation: operation,
 	}
+}
+
+type hook struct {
+	txn newrelic.Transaction
+}
+
+func (h hook) BeforeProcess(ctx context.Context, cmd redis.Cmder) (context.Context, error) {
+	return context.WithValue(ctx, startTimeKey, newrelic.StartSegmentNow(h.txn)), nil
+}
+
+func (h hook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
+	return segmentBuilder(h.txn, newrelic.DatastoreRedis, strings.Split(cmd.String(), " ")[0]).End()
+}
+
+func (h hook) BeforeProcessPipeline(ctx context.Context, cmds []redis.Cmder) (context.Context, error) {
+	return ctx, nil
+}
+
+func (h hook) AfterProcessPipeline(ctx context.Context, cmds []redis.Cmder) error {
+	return nil
 }
